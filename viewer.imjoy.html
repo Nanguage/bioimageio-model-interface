@@ -1,0 +1,41 @@
+<config lang="json">
+{
+    "name": "viewer",
+    "type": "web-python",
+    "tags": [],
+    "flags": [],
+    "ui": "",
+    "version": "0.1.0",
+    "cover": "",
+    "description": "View your image",
+    "icon": "extension",
+    "inputs": null,
+    "outputs": null,
+    "api_version": "0.1.8",
+    "env": "",
+    "permissions": [],
+    "requirements": ["imageio"],
+    "dependencies": []
+}
+</config>
+
+<script lang="python">
+import numpy as np
+from imjoy import api
+import imageio
+
+
+class Plugin():
+    async def setup(self):
+        api.log("Viewer plugin is ready.")
+        self.viewer = await api.createWindow(
+            src="https://oeway.github.io/itk-vtk-viewer/",
+            fullscreen=True
+        )
+
+    async def set_image(self, image):
+        self.viewer.setImage(image)
+
+
+api.export(Plugin())
+</script>

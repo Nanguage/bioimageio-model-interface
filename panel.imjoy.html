@@ -1,0 +1,85 @@
+<docs lang="markdown">
+The panel for upload the image file.
+</docs>
+
+<config lang="json">
+{
+    "name": "upload-panel",
+    "type": "window",
+    "tags": [],
+    "ui": "",
+    "version": "0.1.0",
+    "cover": "",
+    "description": "[TODO: describe this plugin with one sentence.]",
+    "icon": "extension",
+    "inputs": null,
+    "outputs": null,
+    "api_version": "0.1.8",
+    "env": "",
+    "permissions": [],
+    "requirements": ["https://cdn.tailwindcss.com"],
+    "dependencies": []
+}
+</config>
+
+<script lang="javascript">
+const readImageFile = (file)=>{
+    return new Promise((resolve, reject)=>{
+        const U = window.URL || window.webkitURL;
+        // this works for safari
+        if(U.createObjectURL){
+            resolve(U.createObjectURL(file))
+        }
+        // fallback
+        else{
+            const fr = new FileReader();
+            // when image is loaded, set the src of the image where you want to display it
+            fr.onload = function(e) {
+                resolve(e.target.result)
+            };
+            fr.onerror = reject
+            // fill fr with image data
+            fr.readAsDataURL(file);
+        }
+    })
+}
+
+class ImJoyPlugin {
+    async setup() {
+        const fileInput = document.getElementById("file_input")
+        fileInput.addEventListener("change", async () => {
+            const img = await readImageFile(fileInput.files[0])
+            await api.alert(img)
+        })
+        await api.createWindow(
+            {
+                src: "http://127.0.0.1:8080/viewer.imjoy.html",
+                "viewer"
+            }
+        )
+    }
+
+    async run(ctx) {}
+}
+
+api.export(new ImJoyPlugin())
+</script>
+
+<window lang="html">
+<div class="m-1">
+    <h1 class="text-3xl font-bold">
+        Upload then view the image
+    </h1> 
+
+    <p class="mt-4"></p>
+
+    <input
+        class="block w-full text-sm text-gray-900 border border-gray-300 cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+        id="file_input" type="file"
+    >
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="file_input_help">
+        PNG, JPG or TIFF.
+    </p>
+
+</div/
+</window>
