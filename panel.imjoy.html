@@ -51,12 +51,9 @@ class ImJoyPlugin {
             const img = await readImageFile(fileInput.files[0])
             await api.alert(img)
         })
-        await api.createWindow(
-            {
-                src: "http://127.0.0.1:8080/viewer.imjoy.html",
-                "viewer"
-            }
-        )
+        const viewer = await api.loadPlugin({
+            src: "http://127.0.0.1:8000/viewer.imjoy.html",
+        })
     }
 
     async run(ctx) {}
