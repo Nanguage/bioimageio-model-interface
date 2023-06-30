@@ -20,7 +20,7 @@
 </config>
 
 <script lang="python">
-import numpy as np
+import io
 from imjoy import api
 import imageio
 
@@ -30,11 +30,18 @@ class Plugin():
         api.log("Viewer plugin is ready.")
         self.viewer = await api.createWindow(
             src="https://oeway.github.io/itk-vtk-viewer/",
-            fullscreen=True
+            fullscreen=False
         )
 
     async def set_image(self, image):
         self.viewer.setImage(image)
+
+    async def read_image_from_bytes(self, file_name, img_bytes):
+        file = io.BytesIO(img_bytes)
+        file.name = file_name
+        image = imageio.imread(file)
+        await api.alert("Image loaded", image)
+        await self.set_image(image)
 
 
 api.export(Plugin())

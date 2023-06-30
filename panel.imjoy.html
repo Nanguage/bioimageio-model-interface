@@ -18,41 +18,28 @@ The panel for upload the image file.
     "env": "",
     "permissions": [],
     "requirements": ["https://cdn.tailwindcss.com"],
-    "dependencies": []
+    "dependencies": ["http://127.0.0.1:8000/viewer.imjoy.html"]
 }
 </config>
 
 <script lang="javascript">
-const readImageFile = (file)=>{
-    return new Promise((resolve, reject)=>{
-        const U = window.URL || window.webkitURL;
-        // this works for safari
-        if(U.createObjectURL){
-            resolve(U.createObjectURL(file))
-        }
-        // fallback
-        else{
-            const fr = new FileReader();
-            // when image is loaded, set the src of the image where you want to display it
-            fr.onload = function(e) {
-                resolve(e.target.result)
-            };
-            fr.onerror = reject
-            // fill fr with image data
-            fr.readAsDataURL(file);
-        }
-    })
-}
-
 class ImJoyPlugin {
     async setup() {
         const fileInput = document.getElementById("file_input")
         fileInput.addEventListener("change", async () => {
-            const img = await readImageFile(fileInput.files[0])
-            await api.alert(img)
-        })
-        const viewer = await api.loadPlugin({
-            src: "http://127.0.0.1:8000/viewer.imjoy.html",
+            const file = fileInput.files[0]
+            if (!file) {
+                await api.alert("No file selected")
+                return
+            }
+            const reader = new FileReader()
+            reader.onload = async function() {
+                const plugin = await api.getPlugin('viewer')
+                await api.log("plugin loaded")
+                const content = this.result
+                await plugin.read_image_from_bytes(file.name, content)
+            }
+            reader.readAsArrayBuffer(file)
         })
     }
 
@@ -78,5 +65,5 @@ api.export(new ImJoyPlugin())
         PNG, JPG or TIFF.
     </p>
 
-</div/
+</div>
 </window>
