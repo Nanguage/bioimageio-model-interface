@@ -25,22 +25,37 @@ The panel for upload the image file.
 <script lang="javascript">
 class ImJoyPlugin {
     async setup() {
-        const fileInput = document.getElementById("file_input")
+        const viewer_plugin = await api.getPlugin('viewer')
+        const fileInput = document.getElementById("file-input")
+        const fileChosen = document.getElementById('file-chosen');
+
         fileInput.addEventListener("change", async () => {
             const file = fileInput.files[0]
+            fileChosen.textContent = file.name
             if (!file) {
                 await api.alert("No file selected")
                 return
             }
             const reader = new FileReader()
             reader.onload = async function() {
-                const plugin = await api.getPlugin('viewer')
-                await api.log("plugin loaded")
+                await api.log("viewer plugin loaded")
                 const content = this.result
-                await plugin.read_image_from_bytes(file.name, content)
+                await viewer_plugin.load_image_from_bytes(file.name, content)
             }
             reader.readAsArrayBuffer(file)
         })
+
+        const urlInput = document.getElementById("url-input")
+        const urlLoadButton = document.getElementById("url-load-button")
+        urlLoadButton.addEventListener("click", async () => {
+            const url = urlInput.value
+            if (!url) {
+                await api.alert("No URL provided")
+                return
+            }
+            await viewer_plugin.load_image_from_url(url)
+        })
+
     }
 
     async run(ctx) {}
@@ -55,15 +70,24 @@ api.export(new ImJoyPlugin())
         Upload then view the image
     </h1> 
 
-    <p class="mt-4"></p>
+    <p class="mt-4">Load an PNG, JPG or TIFF file:</p>
+    <div class="flex">
+      <span id="file-chosen" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500">No file selected.</span>
+      <label for="file-input" class="py-2 px-3 bg-blue-500 text-white rounded-r-md cursor-pointer w-20 text-center">
+        Browse
+      </label>
+      <input type="file" id="file-input" class="hidden" />
+    </div>
 
-    <input
-        class="block w-full text-sm text-gray-900 border border-gray-300 cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
-        id="file_input" type="file"
-    >
-    <p class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="file_input_help">
-        PNG, JPG or TIFF.
-    </p>
-
+    <p class="mt-4">Or load from an URL:</p>
+    <div class="flex">
+      <input type="text" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500"
+        placeholder="Target URL"
+        id="url-input" />
+      <button
+        class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20"
+        id="url-load-button">Load</button>
+    </div>
+ 
 </div>
 </window>
