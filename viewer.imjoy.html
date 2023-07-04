@@ -54,12 +54,24 @@ class Plugin():
     async def setup(self):
         api.log("Viewer plugin is ready.")
 
-    async def show_image(self, image):
+    async def show_image_vtk(self, image):
         self.viewer = await api.createWindow(
             src="https://oeway.github.io/itk-vtk-viewer/",
             fullscreen=False
         )
         self.viewer.setImage(image)
+
+    async def show_image_avivator(self, url: str):
+        self.viewer = await api.createWindow(
+            src=f"https://avivator.gehlenborglab.org/?image_url={url}",
+            fullscreen=False
+        )
+
+    async def show_image_vizarr(self, url: str):
+        self.viewer = await api.createWindow(
+            src=f"https://oeway.github.io/vizarr/?source={url}",
+            fullscreen=False
+        )
 
     async def load_image_from_bytes(self, file_name, img_bytes):
         _file = io.BytesIO(img_bytes)
@@ -68,11 +80,18 @@ class Plugin():
         await api.log("Image loaded")
         await self.show_image(image)
 
-    async def load_image_from_url(self, url):
-        bytes_ = await fetch_file_content(url)
-        file_name = url.split("?")[0].split("/")[-1]
+    async def load_image_from_url(self, url, zarr_viewer='vizarr'):
+        file_name = url.split("?")[0].rstrip('/').split("/")[-1]
         await api.log(file_name)
-        await self.load_image_from_bytes(file_name, bytes_)
+        if file_name.endswith(".zarr"):
+            if zarr_viewer == 'vizarr':
+                await self.show_image_vizarr(url)
+            else:
+                await self.show_image_avivator(url)
+        else:
+            bytes_ = await fetch_file_content(url)
+            await api.log(file_name)
+            await self.load_image_from_bytes(file_name, bytes_)
 
 
 api.export(Plugin())
