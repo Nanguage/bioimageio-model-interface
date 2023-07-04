@@ -78,7 +78,7 @@ class Plugin():
         _file.name = file_name
         image = imageio.imread(_file)
         await api.log("Image loaded")
-        await self.show_image(image)
+        await self.show_image_vtk(image)
 
     async def load_image_from_url(self, url, zarr_viewer='vizarr'):
         file_name = url.split("?")[0].rstrip('/').split("/")[-1]
