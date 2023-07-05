@@ -76,8 +76,14 @@ class Plugin():
     async def load_image_from_bytes(self, file_name, img_bytes):
         _file = io.BytesIO(img_bytes)
         _file.name = file_name
-        image = imageio.imread(_file)
-        await api.log("Image loaded")
+        if file_name.endswith(".tif") or file_name.endswith(".tiff"):
+            image = imageio.volread(_file)
+        else:
+            image = imageio.imread(_file)
+        await api.log(
+            "Image loaded with shape: " + str(image.shape) +
+            " and dtype: " + str(image.dtype)
+        )
         await self.show_image_vtk(image)
 
     async def load_image_from_url(self, url, zarr_viewer='vizarr'):
