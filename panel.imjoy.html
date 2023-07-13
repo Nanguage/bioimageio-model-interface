@@ -25,11 +25,18 @@ The panel for upload the image file.
 <script lang="javascript">
 class ImJoyPlugin {
     async setup() {
+        await this.setupEvents()
+    }
+
+    async setupEvents() {
         const viewer_plugin = await api.getPlugin('viewer')
+        this.viewer_plugin = viewer_plugin
         const fileInput = document.getElementById("file-input")
         const fileChosen = document.getElementById('file-chosen');
+        const viewImageByBytes = this.viewImageByBytes.bind(this)
+        const viewImageByURL = this.viewImageByURL.bind(this)
 
-        fileInput.addEventListener("change", async () => {
+        fileInput.addEventListener("input", async () => {
             const file = fileInput.files[0]
             fileChosen.textContent = file.name
             if (!file) {
@@ -40,7 +47,9 @@ class ImJoyPlugin {
             reader.onload = async function() {
                 await api.log("viewer plugin loaded")
                 const content = this.result
-                await viewer_plugin.load_image_from_bytes(file.name, content)
+                await viewImageByBytes(file.name, content)
+                // set to empty so that the same file can be loaded again
+                fileInput.value = ''
             }
             reader.readAsArrayBuffer(file)
         })
@@ -53,12 +62,44 @@ class ImJoyPlugin {
                 await api.alert("No URL provided")
                 return
             }
-            await viewer_plugin.load_image_from_url(url)
+            await viewImageByURL(url)
         })
 
     }
 
-    async run(ctx) {}
+    async viewImageByBytes(fileName, bytes) {
+        this.bytes_data = bytes
+        console.log(bytes)
+        this.viewer_plugin.load_image_from_bytes(fileName, bytes)
+    }
+
+    async viewImageByURL(url) {
+        this.url = url
+        const fileName = url.split("?")[0]
+          .replace(/\/$/, '')
+          .split("/")
+          .pop();
+
+        if (fileName.endsWith(".zarr")) {
+            await this.viewer_plugin.show_image_avivator(url)
+        } else {
+            const bytes = await this.loadBytesFromURL(url)
+            this.bytes_data = bytes
+            this.viewer_plugin.load_image_from_bytes(fileName, bytes)
+        }
+    }
+
+    async loadBytesFromURL(url) {
+        console.log("loading bytes from url", url)
+        const response = await fetch(url)
+        const bytes = await response.arrayBuffer()
+        console.log(bytes)
+        return bytes
+    }
+
+    async run(ctx) {
+        console.log(ctx)
+    }
 }
 
 api.export(new ImJoyPlugin())
