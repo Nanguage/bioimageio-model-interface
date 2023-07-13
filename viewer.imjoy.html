@@ -23,31 +23,6 @@
 import io
 from imjoy import api
 import imageio
-try:
-    import pyodide
-    is_pyodide = True
-except ImportError:
-    is_pyodide = False
-
-
-async def fetch_file_content(url) -> bytes:
-    """Fetch file content from url, return bytes.
-    Compatible with both pyodide and native-python.
-
-    Reference:
-        https://github.com/imjoy-team/kaibu-utils/blob/ecc25337adb0c94e6345f09bba80aa0637ce9af0/kaibu_utils/__init__.py#L403-L425
-    """
-    await api.log("Fetch URL: " + url)
-    if is_pyodide:
-        from js import fetch
-        response = await fetch(url)
-        bytes_ = await response.arrayBuffer()
-        bytes_ = bytes_.to_py()
-    else:
-        import requests
-        bytes_ = requests.get(url)
-    await api.log("Fetched bytes: " + str(len(bytes_)))
-    return bytes_
 
 
 class Plugin():
@@ -85,19 +60,6 @@ class Plugin():
             " and dtype: " + str(image.dtype)
         )
         await self.show_image_vtk(image)
-
-    async def load_image_from_url(self, url, zarr_viewer='vizarr'):
-        file_name = url.split("?")[0].rstrip('/').split("/")[-1]
-        await api.log(file_name)
-        if file_name.endswith(".zarr"):
-            if zarr_viewer == 'vizarr':
-                await self.show_image_vizarr(url)
-            else:
-                await self.show_image_avivator(url)
-        else:
-            bytes_ = await fetch_file_content(url)
-            await api.log(file_name)
-            await self.load_image_from_bytes(file_name, bytes_)
 
 
 api.export(Plugin())

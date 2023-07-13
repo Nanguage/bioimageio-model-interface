@@ -17,7 +17,11 @@ The panel for upload the image file.
     "api_version": "0.1.8",
     "env": "",
     "permissions": [],
-    "requirements": ["https://cdn.tailwindcss.com"],
+    "requirements": [
+        "https://cdn.tailwindcss.com",
+        "https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit.min.js",
+        "https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit-icons.min.js"
+    ],
     "dependencies": ["http://127.0.0.1:8000/viewer.imjoy.html"]
 }
 </config>
@@ -25,6 +29,7 @@ The panel for upload the image file.
 <script lang="javascript">
 class ImJoyPlugin {
     async setup() {
+        console.log("setup")
         await this.setupEvents()
     }
 
@@ -98,7 +103,7 @@ class ImJoyPlugin {
     }
 
     async run(ctx) {
-        console.log(ctx)
+        console.log("run", ctx)
     }
 }
 
@@ -107,10 +112,6 @@ api.export(new ImJoyPlugin())
 
 <window lang="html">
 <div class="m-1">
-    <h1 class="text-3xl font-bold">
-        Upload then view the image
-    </h1> 
-
     <p class="mt-4">Load an PNG, JPG or TIFF file:</p>
     <div class="flex">
       <span id="file-chosen" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500">No file selected.</span>
