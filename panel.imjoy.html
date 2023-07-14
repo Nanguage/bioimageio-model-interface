@@ -19,18 +19,30 @@ The panel for upload the image file.
     "permissions": [],
     "requirements": [
         "https://cdn.tailwindcss.com",
-        "https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit.min.js",
-        "https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit-icons.min.js"
+        "https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.6/dist/hypha-rpc-websocket.min.js"
     ],
     "dependencies": ["http://127.0.0.1:8000/viewer.imjoy.html"]
 }
 </config>
 
 <script lang="javascript">
+
 class ImJoyPlugin {
     async setup() {
         console.log("setup")
+        await this.setupBioengine()
         await this.setupEvents()
+    }
+
+    async setupBioengine() {
+        const server = await hyphaWebsocketClient.connectToServer({
+            "name": "client",
+            "server_url": "https://ai.imjoy.io",
+            "method_timeout": 30
+        })
+        const triton = await server.getService("triton-client")
+        console.log("Triton service:", triton)
+        this.triton = triton
     }
 
     async setupEvents() {
@@ -102,8 +114,28 @@ class ImJoyPlugin {
         return bytes
     }
 
+    async getModelRDF(model_id) {
+        const ret = await this.triton.execute(
+            [{
+                "model_id": model_id,
+                "inputs": null,
+                "return_rdf": true,
+                "weight_format": null
+            }],
+            "bioengine-model-runner",
+            "imjoy",
+        )
+        console.log(ret)
+        const result = ret.result
+        const rdf = result.rdf
+        return rdf
+    }
+
     async run(ctx) {
         console.log("run", ctx)
+        const defaultModel = "10.5281/zenodo.5874741"
+        const model_id = ctx.data.id || defaultModel
+        const rdf = await this.getModelRDF(model_id)
     }
 }
 
@@ -130,6 +162,5 @@ api.export(new ImJoyPlugin())
         class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20"
         id="url-load-button">Load</button>
     </div>
- 
 </div>
 </window>
