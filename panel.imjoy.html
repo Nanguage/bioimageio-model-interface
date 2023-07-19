@@ -21,7 +21,10 @@ The panel for upload the image file.
         "https://cdn.tailwindcss.com",
         "https://cdn.jsdelivr.net/npm/imjoy-rpc@0.5.6/dist/hypha-rpc-websocket.min.js"
     ],
-    "dependencies": ["http://127.0.0.1:8000/viewer.imjoy.html"]
+    "dependencies": [
+        "http://127.0.0.1:8000/viewer.imjoy.html",
+        "http://127.0.0.1:8000/connector.imjoy.html"
+    ]
 }
 </config>
 
@@ -30,47 +33,42 @@ The panel for upload the image file.
 class ImJoyPlugin {
     async setup() {
         console.log("setup")
-        await this.setupBioengine()
+        this.connector_plugin = await api.getPlugin('connector')
+        this.viewer_plugin = await api.getPlugin('viewer')
         await this.setupEvents()
-    }
-
-    async setupBioengine() {
-        const server = await hyphaWebsocketClient.connectToServer({
-            "name": "client",
-            "server_url": "https://ai.imjoy.io",
-            "method_timeout": 30
-        })
-        const triton = await server.getService("triton-client")
-        console.log("Triton service:", triton)
-        this.triton = triton
+        this.hidenLoadingInfo()
     }
 
     async setupEvents() {
-        const viewer_plugin = await api.getPlugin('viewer')
-        this.viewer_plugin = viewer_plugin
         const fileInput = document.getElementById("file-input")
         const fileChosen = document.getElementById('file-chosen');
         const viewImageByBytes = this.viewImageByBytes.bind(this)
         const viewImageByURL = this.viewImageByURL.bind(this)
+        const showLoadingInfo = this.showLoadingInfo.bind(this)
+        const hidenLoadingInfo = this.hidenLoadingInfo.bind(this)
 
+        // Listen for file selection
         fileInput.addEventListener("input", async () => {
+            showLoadingInfo()
             const file = fileInput.files[0]
             fileChosen.textContent = file.name
             if (!file) {
                 await api.alert("No file selected")
+                hidenLoadingInfo()
                 return
             }
             const reader = new FileReader()
             reader.onload = async function() {
-                await api.log("viewer plugin loaded")
                 const content = this.result
                 await viewImageByBytes(file.name, content)
                 // set to empty so that the same file can be loaded again
                 fileInput.value = ''
+                hidenLoadingInfo()()
             }
             reader.readAsArrayBuffer(file)
         })
 
+        // Listen for URL input
         const urlInput = document.getElementById("url-input")
         const urlLoadButton = document.getElementById("url-load-button")
         urlLoadButton.addEventListener("click", async () => {
@@ -79,9 +77,10 @@ class ImJoyPlugin {
                 await api.alert("No URL provided")
                 return
             }
+            showLoadingInfo()
             await viewImageByURL(url)
+            hidenLoadingInfo()
         })
-
     }
 
     async viewImageByBytes(fileName, bytes) {
@@ -114,28 +113,29 @@ class ImJoyPlugin {
         return bytes
     }
 
-    async getModelRDF(model_id) {
-        const ret = await this.triton.execute(
-            [{
-                "model_id": model_id,
-                "inputs": null,
-                "return_rdf": true,
-                "weight_format": null
-            }],
-            "bioengine-model-runner",
-            "imjoy",
-        )
-        console.log(ret)
-        const result = ret.result
-        const rdf = result.rdf
-        return rdf
+    async set_default_url(model_id) {
+        const rdf = await this.connector_plugin.get_model_rdf(model_id)
+        console.log(rdf)
+        const sampleInput = rdf.sample_inputs[0]
+        const urlInput = document.getElementById("url-input")
+        urlInput.value = sampleInput
+    }
+
+    showLoadingInfo() {
+        const loadingInfo = document.getElementById("loading-info")
+        loadingInfo.style.display = "block"
+    }
+
+    hidenLoadingInfo() {
+        const loadingInfo = document.getElementById("loading-info")
+        loadingInfo.style.display = "none"
     }
 
     async run(ctx) {
         console.log("run", ctx)
         const defaultModel = "10.5281/zenodo.5874741"
         const model_id = ctx.data.id || defaultModel
-        const rdf = await this.getModelRDF(model_id)
+        await this.set_default_url(model_id)
     }
 }
 
@@ -146,21 +146,37 @@ api.export(new ImJoyPlugin())
 <div class="m-1">
     <p class="mt-4">Load an PNG, JPG or TIFF file:</p>
     <div class="flex">
-      <span id="file-chosen" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500">No file selected.</span>
-      <label for="file-input" class="py-2 px-3 bg-blue-500 text-white rounded-r-md cursor-pointer w-20 text-center">
-        Browse
-      </label>
-      <input type="file" id="file-input" class="hidden" />
+        <span id="file-chosen" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500">No file selected.</span>
+        <label for="file-input" class="py-2 px-3 bg-blue-500 text-white rounded-r-md cursor-pointer w-20 text-center">
+            Browse
+        </label>
+        <input type="file" id="file-input" class="hidden" />
     </div>
 
     <p class="mt-4">Or load from an URL. The URL to OME-Zarr are supported:</p>
     <div class="flex">
-      <input type="text" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500"
-        placeholder="Target URL"
-        id="url-input" />
+        <input type="text" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500"
+            placeholder="Target URL"
+            id="url-input" />
+        <button
+            class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20"
+            id="url-load-button">Load</button>
+    </div>
+
+    <p class="mt-2" id="loading-info">Loading...</p>
+
+    <div class="flex flex-row gap-4 mt-2">
       <button
-        class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20"
-        id="url-load-button">Load</button>
+        class="px-4 py-2 bg-blue-500 text-white rounded-md w-25"
+        id="submit-button">Submit</button>
+
+      <button
+        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
+        id="sample-input-button">Sample input</button>
+
+      <button
+        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
+        id="sample-output-button">Sample output</button>
     </div>
 </div>
 </window>

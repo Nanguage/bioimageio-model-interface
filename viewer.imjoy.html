@@ -28,12 +28,12 @@ import imageio
 class Plugin():
     async def setup(self):
         api.log("Viewer plugin is ready.")
-
-    async def show_image_vtk(self, image):
         self.viewer = await api.createWindow(
             src="https://oeway.github.io/itk-vtk-viewer/",
             fullscreen=False
         )
+
+    async def show_image_vtk(self, image):
         self.viewer.setImage(image)
 
     async def show_image_avivator(self, url: str):

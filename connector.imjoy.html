@@ -21,8 +21,9 @@
 
 <script lang="python">
 import io
-from imjoy import api
 import imageio
+from imjoy import api
+from imjoy_rpc.hypha import connect_to_server
 
 
 class Plugin():
@@ -43,7 +44,8 @@ class Plugin():
         return ret["result"]
 
     async def get_model_rdf(self, model_id):
-        return await self.bioengine_execute(model_id, return_rdf=True)
+        ret = await self.bioengine_execute(model_id, return_rdf=True)
+        return ret["rdf"]
 
     async def run(ctx):
         pass
