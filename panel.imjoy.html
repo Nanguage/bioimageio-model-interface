@@ -35,19 +35,24 @@ class ImJoyPlugin {
         console.log("setup")
         this.connector_plugin = await api.getPlugin('connector')
         this.viewer_plugin = await api.getPlugin('viewer')
-        await this.setupEvents()
+        this.setupEvents()
         this.hidenLoadingInfo()
     }
 
-    async setupEvents() {
+    setupEvents() {
+        const showLoadingInfo = this.showLoadingInfo.bind(this)
+        const hidenLoadingInfo = this.hidenLoadingInfo.bind(this)
+        this.listenFileSelection(showLoadingInfo, hidenLoadingInfo)
+        this.listenURLInput(showLoadingInfo, hidenLoadingInfo)
+        this.listenSampleInputButton(showLoadingInfo, hidenLoadingInfo)
+        this.listenSampleOutputButton(showLoadingInfo, hidenLoadingInfo)
+    }
+
+    listenFileSelection(showLoadingInfo, hidenLoadingInfo) {
         const fileInput = document.getElementById("file-input")
         const fileChosen = document.getElementById('file-chosen');
         const viewImageByBytes = this.viewImageByBytes.bind(this)
-        const viewImageByURL = this.viewImageByURL.bind(this)
-        const showLoadingInfo = this.showLoadingInfo.bind(this)
-        const hidenLoadingInfo = this.hidenLoadingInfo.bind(this)
 
-        // Listen for file selection
         fileInput.addEventListener("input", async () => {
             showLoadingInfo()
             const file = fileInput.files[0]
@@ -67,8 +72,10 @@ class ImJoyPlugin {
             }
             reader.readAsArrayBuffer(file)
         })
+    }
 
-        // Listen for URL input
+    listenURLInput(showLoadingInfo, hidenLoadingInfo) {
+        const viewImageByURL = this.viewImageByURL.bind(this)
         const urlInput = document.getElementById("url-input")
         const urlLoadButton = document.getElementById("url-load-button")
         urlLoadButton.addEventListener("click", async () => {
@@ -79,6 +86,26 @@ class ImJoyPlugin {
             }
             showLoadingInfo()
             await viewImageByURL(url)
+            hidenLoadingInfo()
+        })
+    }
+
+    listenSampleInputButton(showLoadingInfo, hidenLoadingInfo) {
+        const sampleInputButton = document.getElementById("sample-input-button")
+        sampleInputButton.addEventListener("click", async () => {
+            const sampleInput = this.model_rdf.sample_inputs[0]
+            showLoadingInfo()
+            await this.viewImageByURL(sampleInput)
+            hidenLoadingInfo()
+        })
+    }
+
+    listenSampleOutputButton(showLoadingInfo, hidenLoadingInfo) {
+        const sampleOutputButton = document.getElementById("sample-output-button")
+        sampleOutputButton.addEventListener("click", async () => {
+            const sampleOutput = this.model_rdf.sample_outputs[0]
+            showLoadingInfo()
+            await this.viewImageByURL(sampleOutput)
             hidenLoadingInfo()
         })
     }
@@ -115,6 +142,7 @@ class ImJoyPlugin {
 
     async set_default_url(model_id) {
         const rdf = await this.connector_plugin.get_model_rdf(model_id)
+        this.model_rdf = rdf
         console.log(rdf)
         const sampleInput = rdf.sample_inputs[0]
         const urlInput = document.getElementById("url-input")
@@ -169,11 +197,9 @@ api.export(new ImJoyPlugin())
       <button
         class="px-4 py-2 bg-blue-500 text-white rounded-md w-25"
         id="submit-button">Submit</button>
-
       <button
         class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
         id="sample-input-button">Sample input</button>
-
       <button
         class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
         id="sample-output-button">Sample output</button>
