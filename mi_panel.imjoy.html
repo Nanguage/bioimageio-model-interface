@@ -112,11 +112,21 @@ class ImJoyPlugin {
         const submitButton = document.getElementById("submit-button")
         const core = this.core_plugin
         const self = this
+        const inputAxes = document.getElementById("input-axes-input")
         submitButton.addEventListener("click", async () => {
-            await core.run_model(self.model_id, self.model_rdf)
+            const input_axes = inputAxes.value || null
+            console.log("Input axes:", input_axes)
             setInfoPanel("Running model...")
-            await core.view_image_vtk()
-            setInfoPanel("")
+            const ret = await core.run_model(
+                self.model_id, self.model_rdf, input_axes
+            )
+            if (ret === false) {
+                setInfoPanel("Failed to run the model.")
+            } else {
+                await self.updateImageShapePanel()
+                await core.show_image_vtk()
+                setInfoPanel("")
+            }
         })
     }
 
@@ -124,11 +134,13 @@ class ImJoyPlugin {
         console.log(bytes)
         this.bytes_data = bytes
         await this.core_plugin.load_image_from_bytes(fileName, bytes)
+        await this.updateImageShapePanel()
         await this.core_plugin.show_image_vtk()
     }
 
     async viewImageByURL(url) {
         await this.core_plugin.load_image_from_url(url)
+        await this.updateImageShapePanel()
         await this.core_plugin.show_image_vtk()
     }
 
@@ -140,6 +152,12 @@ class ImJoyPlugin {
     setInfoPanel(content) {
         const info = document.getElementById("info-panel")
         info.textContent = content
+    }
+
+    async updateImageShapePanel() {
+        const shape = await this.core_plugin.get_current_image_shape()
+        const imgShapePanel = document.getElementById("img-shape-panel")
+        imgShapePanel.textContent = `Current image shape: ${shape}`
     }
 
     async run(ctx) {
@@ -161,36 +179,42 @@ api.export(new ImJoyPlugin())
 
 <window lang="html">
 <div class="m-1">
-    <p class="mt-4">Load an PNG, JPG or TIFF file:</p>
+    <p class="mt-2">Load an PNG, JPG or TIFF file:</p>
     <div class="flex">
         <span id="file-chosen" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500">No file selected.</span>
-        <label for="file-input" class="py-2 px-3 bg-blue-500 text-white rounded-r-md cursor-pointer w-20 text-center">
+        <label for="file-input" class="py-2 px-3 bg-blue-500 text-white rounded-r-md cursor-pointer w-20 text-center hover:bg-blue-600">
             Browse
         </label>
         <input type="file" id="file-input" class="hidden" />
     </div>
 
-    <p class="mt-4">Or load from an URL. The URL to OME-Zarr are supported:</p>
+    <p class="mt-2">Or load from an URL. The URL to OME-Zarr are supported:</p>
     <div class="flex">
         <input type="text" class="w-1/2 px-4 py-2 border border-gray-300 rounded-l-md text-gray-500"
             placeholder="Target URL"
             id="url-input" />
         <button
-            class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20"
+            class="px-4 py-2 bg-blue-500 text-white rounded-r-md w-20 hover:bg-blue-600"
             id="url-load-button">Load</button>
     </div>
 
-    <p class="mt-2" id="info-panel"></p>
+    <p class="mt-2">Input axes (optional, for example yxzc):</p>
+    <input type="text" class="w-2/3 px-4 py-2 border border-gray-300 rounded-md text-gray-500"
+        placeholder="Input axes"
+        id="input-axes-input" />
+
+    <p class="mt-2 text-gray-500 text-sm" id="info-panel"></p>
+    <p class="mt-2 text-gray-500 text-sm" id="img-shape-panel"></p>
 
     <div class="flex flex-row gap-4 mt-2">
       <button
-        class="px-4 py-2 bg-blue-500 text-white rounded-md w-25"
+        class="px-4 py-2 bg-blue-500 text-white rounded-md w-25 hover:bg-blue-600"
         id="submit-button">Submit</button>
       <button
-        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
+        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30 hover:bg-cyan-400"
         id="sample-input-button">Sample input</button>
       <button
-        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30"
+        class="px-4 py-2 bg-cyan-300 text-white rounded-md w-30 hover:bg-cyan-400"
         id="sample-output-button">Sample output</button>
     </div>
 </div>
