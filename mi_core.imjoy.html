@@ -1,6 +1,6 @@
 <config lang="json">
 {
-    "name": "connector",
+    "name": "mi-core",
     "type": "web-python",
     "tags": [],
     "flags": [],
@@ -14,7 +14,7 @@
     "api_version": "0.1.8",
     "env": "",
     "permissions": [],
-    "requirements": ["imageio"],
+    "requirements": ["imageio", "xarray"],
     "dependencies": []
 }
 </config>
@@ -22,6 +22,8 @@
 <script lang="python">
 import io
 import imageio
+import numpy as np
+from xarray import DataArray
 from imjoy import api
 from imjoy_rpc.hypha import connect_to_server
 try:
@@ -49,6 +51,18 @@ async def fetch_file_content(url) -> bytes:
         bytes_ = requests.get(url)
     await api.log("Fetched bytes: " + str(len(bytes_)))
     return bytes_
+
+
+def is_channel_first(shape):
+    if len(shape) == 5:  # with batch dimension
+        shape = shape[1:]
+    min_dim = np.argmin(list(shape))
+    if min_dim == 0:  # easy case: channel first
+        return True
+    elif min_dim == len(shape) - 1:  # easy case: channel last
+        return False
+    else:  # hard case: can't figure it out, just guess channel first
+        return True
 
 
 def get_default_image_axes(shape, input_tensor_axes):
@@ -102,7 +116,7 @@ def map_axes(
     return output.values
 
 
-async def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
+def transform_input(image: np.ndarray, image_axes: str, output_axes: str):
     """Transfor the input image into an output tensor with output_axes
     
     Args:
@@ -168,21 +182,24 @@ class Plugin():
     async def run_model(
             self, model_id, rdf,
             image_axes=None, weight_format=None):
-        if not self.image:
+        if self.image is None:
             await api.alert("Please load an image first.")
             return
         img = self.image
         input_spec = rdf['inputs'][0]
         input_tensor_axes = input_spec['axes']
-        if not image_axes:
-            image_axes = get_default_image_axes(image.shape, input_tensor_axes)
-            await api.showMessage(f"Image axes were not provided. They were automatically determined to be {image_axes}")
+        await api.log("input_tensor_axes", input_tensor_axes)
+        if image_axes is None:
+            shape = img.shape
+            image_axes = get_default_image_axes(shape, input_tensor_axes)
+            await api.log(f"Image axes were not provided. They were automatically determined to be {image_axes}")
         else:
-            await api.showMessage(f"Image axes were provided as {image_axes}")
+            await api.log(f"Image axes were provided as {image_axes}")
         assert len(image_axes) == img.ndim
+        await api.log("Transforming input image...")
         img = transform_input(img, image_axes, input_tensor_axes)
-        await api.showMessage(f"Input image was transformed into shape {img.shape} to fit the model")
-        await api.showMessage("Data loaded, running model...")
+        await api.log(f"Input image was transformed into shape {img.shape} to fit the model")
+        await api.log("Data loaded, running model...")
         try:
             result = await self.bioengine_execute(
                 model_id, inputs=[img], weight_format=weight_format)
@@ -193,9 +210,10 @@ class Plugin():
             raise Exception(result['error'])
         output = result['outputs'][0]
         await api.showMessage(f"🎉Model execution completed! Got output tensor of shape {output.shape}")
+        self.image = output
         return output
 
-    async def run(ctx):
+    async def run(self, ctx):
         pass
 
 
