@@ -101,7 +101,6 @@ class ImJoyPlugin {
         const sampleOutputButton = document.getElementById("sample-output-button")
         sampleOutputButton.addEventListener("click", async () => {
             const sampleOutput = this.model_rdf.sample_outputs[0]
-            showLoadingInfo()
             setInfoPanel("Loading sample output...")
             await this.viewImageByURL(sampleOutput)
             setInfoPanel("")

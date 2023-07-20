@@ -135,10 +135,6 @@ class Plugin():
         )
         self.triton = await server.get_service("triton-client")
         self.image = None
-        self.vtk_viewer = await api.createWindow(
-            src="https://oeway.github.io/itk-vtk-viewer/",
-            fullscreen=False
-        )
 
     def set_current_image(self, image):
         assert isinstance(image, np.ndarray)
@@ -152,6 +148,10 @@ class Plugin():
         if self.image is None:
             await api.alert("Please load an image first.")
             return
+        self.vtk_viewer = await api.createWindow(
+            src="https://oeway.github.io/itk-vtk-viewer/",
+            fullscreen=False
+        )
         image = self.image
         self.vtk_viewer.setImage(image)
 
